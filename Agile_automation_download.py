@@ -4,14 +4,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 import logging
-import time
-import os
-from os.path import isfile, join
-from datetime import datetime
-from getpass import getpass
 import ConfigParser
 import logging
-from Excel_Comparison import Excel_Comparison
+import File as f
+from getpass import getpass
+import time
 
 class Agile:
 	def __init__(self, username, password):
@@ -83,42 +80,7 @@ class Agile:
 	def quit(self):
 		self.driver.quit()
 
-def get_most_recent_search_files(dic_path):
-	#get files list from path
-	files = [f for f in os.listdir(dic_path) if isfile(join(dic_path, f))]
-	#check file name with SearchResult in the beginning
-	search_files = [ [f, os.stat(join(dic_path, f)).st_mtime] for f in files if f.startswith("SearchResults") ]
-	# search_files = [ f for f in files if f.startswith("SearchResults") ]
-	search_files = sorted(search_files, key=lambda x : x[1], reverse=True)
-	return [i[0] for i in search_files]
 
-def get_excel_comparison_files(dic_path, proj_name):
-	files = [f for f in os.listdir(dic_path) if isfile(join(dic_path, f))]
-	search_files = [join(dic_path, f) for f in files if f.startswith(proj_name)]
-	search_files.sort(reverse=True)
-	return search_files
-	
-
-def rename_downloaded_file(dic_path, proj_name, most_recent_file):
-	logger.info('start rename downloaded file')
-	#create time stamp
-	time_stamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
-	#rename search result
-	os.rename(join(dic_path,most_recent_file), join(dic_path,proj_name+"_issue_"+time_stamp+".xls"))
-def rename_issue_list(proj_name, download_path):
-	files = get_most_recent_search_files(download_path)
-	if len(files) > 0:
-		rename_downloaded_file(download_path, proj_name, files[0])
-	excel_files = get_excel_comparison_files(download_path, proj_name)
-
-def compare_excels(proj_name, download_path):
-	excel_files = get_excel_comparison_files(download_path, proj_name)
-	print excel_files
-	if len(excel_files) > 2:
-		 excel = Excel_Comparison(excel_files[0], excel_files[1])
-		 excel.compare()
-	else:
-		logger.info("only 1 issue list in folder")
 		
 if __name__ == "__main__":
 	
@@ -130,12 +92,14 @@ if __name__ == "__main__":
 	proj_name = config.get('Agile', 'proj_name')
 	username = config.get('Agile', 'username')
 	download_path = config.get('Agile', 'download_path')
+	store_path = config.get('Agile', 'store_path')
+	
 	password = getpass("Password: ")
 	agile = Agile(username, password)
 	agile.download_issue_list()
-	#rename downloaded issue list to "{proj_name}_issue_{timestamp}.xls"	
-	rename_issue_list(proj_name, download_path)
+	# #rename downloaded issue list to "{proj_name}_issue_{timestamp}.xls"	
+	f.rename_issue_list(proj_name, download_path, store_path)
 	#Start comparing 2 most recent issue list
-	compare_excels(proj_name, download_path)
+	f.compare_excels(proj_name, store_path)
 	agile.quit()
 
